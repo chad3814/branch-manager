@@ -1,0 +1,72 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [ develop ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run tests
+      run: npm test
+    
+    - name: Build application
+      run: npm run build
+    
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: |
+          ghcr.io/chad3814/postgres-branch-manager:staging-latest
+          ghcr.io/chad3814/postgres-branch-manager:staging-${{ github.sha }}
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Update GitOps repo
+      run: |
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
+        
+        # Clone the config repo
+        git clone https://${{ secrets.GITOPS_TOKEN }}@github.com/chad3814/branch-manager-config.git config-repo
+        cd config-repo
+        
+        # Update staging deployment with new image
+        sed -i 's|newTag: staging-.*|newTag: staging-${{ github.sha }}|g' kubernetes/overlays/staging/kustomization.yaml
+        
+        # Commit and push
+        git add .
+        git commit -m "Update staging deployment to ${{ github.sha }}"
+        git push
+    
+    - name: Deploy with Docker Compose (Alternative)
+      if: env.DEPLOY_METHOD == 'docker-compose'
+      run: |
+        # SSH to staging server and update docker-compose
+        echo "${{ secrets.STAGING_SSH_KEY }}" > staging_key
+        chmod 600 staging_key
+        
+        ssh -i staging_key -o StrictHostKeyChecking=no ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} << 'EOF'
+          cd /opt/branch-manager
+          git pull origin develop
+          docker-compose -f docker-compose/staging/docker-compose.yml down
+          docker-compose -f docker-compose/staging/docker-compose.yml pull
+          docker-compose -f docker-compose/staging/docker-compose.yml up -d
+        EOF

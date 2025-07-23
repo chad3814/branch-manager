@@ -1,0 +1,32 @@
+FROM node:20-alpine
+
+# Install development tools
+RUN apk add --no-cache \
+    postgresql-client \
+    curl \
+    git
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install all dependencies (including dev dependencies)
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S branch-manager -u 1001 -G nodejs
+
+# Change ownership
+RUN chown -R branch-manager:nodejs /app
+USER branch-manager
+
+# Expose port
+EXPOSE 3001
+
+# Start in development mode with hot reload
+CMD ["npm", "run", "dev"]

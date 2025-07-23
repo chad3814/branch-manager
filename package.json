@@ -1,0 +1,71 @@
+{
+  "name": "@chad3814/postgres-branch-manager",
+  "version": "1.0.0",
+  "description": "PostgreSQL database branching tool with copy-on-write functionality",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "pg-branch": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/server.ts",
+    "dev:cli": "tsx src/cli.ts",
+    "dev:db": "docker-compose -f docker-compose.dev.yml up -d postgres postgres-test adminer",
+    "dev:all": "docker-compose -f docker-compose.dev.yml up -d",
+    "dev:down": "docker-compose -f docker-compose.dev.yml down",
+    "dev:logs": "docker-compose -f docker-compose.dev.yml logs -f",
+    "dev:reset": "docker-compose -f docker-compose.dev.yml down -v && docker-compose -f docker-compose.dev.yml up -d postgres postgres-test adminer",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "prepare": "npm run build",
+    "start": "node dist/server.js",
+    "start:cli": "node dist/cli.js"
+  },
+  "keywords": [
+    "postgresql",
+    "database",
+    "branching",
+    "copy-on-write",
+    "devops",
+    "gitops"
+  ],
+  "author": "chad3814",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^12.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "express": "^4.18.0",
+    "helmet": "^7.1.0",
+    "pg": "^8.11.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.0",
+    "@types/express": "^4.17.0",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.0",
+    "@typescript-eslint/eslint-plugin": "^8.38.0",
+    "@typescript-eslint/parser": "^8.38.0",
+    "eslint": "^9.31.0",
+    "jest": "^29.7.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.8.3"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chad3814/postgres-branch-manager.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

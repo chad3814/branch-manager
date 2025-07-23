@@ -1,0 +1,79 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run tests
+      run: npm test
+    
+    - name: Build application
+      run: npm run build
+    
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: |
+          ghcr.io/chad3814/postgres-branch-manager:latest
+          ghcr.io/chad3814/postgres-branch-manager:prod-${{ github.sha }}
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Update GitOps repo
+      run: |
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
+        
+        # Clone the config repo
+        git clone https://${{ secrets.GITOPS_TOKEN }}@github.com/chad3814/branch-manager-config.git config-repo
+        cd config-repo
+        
+        # Update production deployment with new image
+        sed -i 's|newTag: latest|newTag: prod-${{ github.sha }}|g' kubernetes/overlays/production/kustomization.yaml
+        
+        # Commit and push
+        git add .
+        git commit -m "Update production deployment to ${{ github.sha }}"
+        git push
+    
+    - name: Deploy with Docker Compose (Alternative)
+      if: env.DEPLOY_METHOD == 'docker-compose'
+      run: |
+        # SSH to production server and update docker-compose
+        echo "${{ secrets.PRODUCTION_SSH_KEY }}" > prod_key
+        chmod 600 prod_key
+        
+        ssh -i prod_key -o StrictHostKeyChecking=no ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
+          cd /opt/branch-manager
+          git pull origin main
+          docker-compose -f docker-compose/production/docker-compose.yml down
+          docker-compose -f docker-compose/production/docker-compose.yml pull
+          docker-compose -f docker-compose/production/docker-compose.yml up -d
+        EOF
+    
+    - name: Health check
+      run: |
+        # Wait for deployment and check health
+        sleep 30
+        curl -f ${{ secrets.PRODUCTION_URL }}/health || exit 1
