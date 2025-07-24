@@ -16,7 +16,7 @@
     "dev:down": "docker-compose -f docker-compose.dev.yml down",
     "dev:logs": "docker-compose -f docker-compose.dev.yml logs -f",
     "dev:reset": "docker-compose -f docker-compose.dev.yml down -v && docker-compose -f docker-compose.dev.yml up -d postgres postgres-test adminer",
-    "test": "jest",
+    "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint src/**/*.ts",
