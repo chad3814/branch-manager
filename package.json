@@ -21,7 +21,6 @@
     "test:coverage": "jest --coverage",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
-    "prepare": "npm run build",
     "start": "node dist/server.js",
     "start:cli": "node dist/cli.js"
   },
